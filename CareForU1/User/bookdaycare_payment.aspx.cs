@@ -1,0 +1,83 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Data;
+using System.Data.SqlClient;
+
+
+public partial class General_bookdaycare_payment : System.Web.UI.Page
+{
+    SqlConnection conn = new SqlConnection("Data Source=SANTU\\SQLEXPRESS;Initial Catalog=CareForYou;Persist Security Info=True;User ID=sa;Password=1234");
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+
+        if (!IsPostBack)
+        {
+            if (Session["AyaId"] == null)
+            {
+                Response.Redirect("~/General/Userlogin.aspx");
+            }
+        }
+
+    }
+
+    protected void register_Click(object sender, EventArgs e)
+    {
+        SqlDataAdapter adp = new SqlDataAdapter("select Email from AyaRequest1 where Contact = @Contact and AyaId = @AyaId and Status = 'Pending'", conn);
+        adp.SelectCommand.Parameters.AddWithValue("@Contact", txtNumber.Text);
+        adp.SelectCommand.Parameters.AddWithValue("@AyaId", Session["AyaId"].ToString());
+
+        DataTable dt = new DataTable();
+        adp.Fill(dt);
+        if (dt.Rows.Count > 0)
+        {
+            lblError.ForeColor = System.Drawing.Color.Red;
+            lblError.Text = "Already requested to this Aya.";
+        }
+        else
+        {
+            SqlCommand cmd = new SqlCommand("insert into AyaRequest1 (Name, Email, Contact, Address, IdType, IdNumber, IdProof, FromDate, FromTime, ToDate, ToTime, Duration, AyaId) values (@Name, @Email, @Contact, @Address, @IdType, @IdNumber, @IdProof, @FromDate, @FromTime, @ToDate, @ToTime, @Duration, @AyaId)", conn);
+            cmd.Parameters.AddWithValue("@Name", txtName.Text);
+            cmd.Parameters.AddWithValue("@Email", Session["Email"].ToString());
+            cmd.Parameters.AddWithValue("@Contact", txtNumber.Text);
+            cmd.Parameters.AddWithValue("@Address", txtadress.Text);
+            cmd.Parameters.AddWithValue("@IdType", ddlIDType.Text);
+            cmd.Parameters.AddWithValue("@IdNumber", Txtidnumber.Text);
+            cmd.Parameters.AddWithValue("@FromDate", txtFromDate.Text);
+            cmd.Parameters.AddWithValue("@FromTime", txtFromTime.Text);
+            cmd.Parameters.AddWithValue("@ToDate", txtToDate.Text);
+            cmd.Parameters.AddWithValue("@ToTime", txtToTime.Text);
+            cmd.Parameters.AddWithValue("@Duration", ddlPreferredDuration.Text);
+            cmd.Parameters.AddWithValue("@AyaId", Session["AyaId"].ToString());
+
+            byte[] imagedata = null;
+            if (File.HasFile)
+            {
+                using (System.IO.BinaryReader br = new System.IO.BinaryReader(File.PostedFile.InputStream))
+                {
+                    imagedata = br.ReadBytes(File.PostedFile.ContentLength);
+                }
+                cmd.Parameters.AddWithValue("@IdProof", imagedata);
+            }
+            else
+            {
+                SqlParameter idProofParam = new SqlParameter("@IdProof", SqlDbType.VarBinary);
+                idProofParam.Value = DBNull.Value;
+                cmd.Parameters.Add(idProofParam);
+            }
+
+            conn.Open();
+            cmd.ExecuteNonQuery();
+            conn.Close();
+
+            lblError.ForeColor = System.Drawing.Color.Green;
+            lblError.Text = "Request submitted successfully.";
+        }
+
+        Response.Redirect("~/General/Thankyou3.aspx");
+    }
+}
